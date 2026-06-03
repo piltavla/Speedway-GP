@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speedway GP Tips</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  min-height:100vh;
+  color:#0f172a;
+  padding:16px;
+  background:
+    radial-gradient(circle at 12% 12%,rgba(250,204,21,.95),transparent 28%),
+    radial-gradient(circle at 88% 10%,rgba(236,72,153,.65),transparent 28%),
+    radial-gradient(circle at 18% 88%,rgba(34,197,94,.75),transparent 32%),
+    linear-gradient(135deg,#020617,#1e1b4b 52%,#020617);
+  background-attachment:fixed;
+}
+.wrap{max-width:760px;margin:0 auto}
+.hero{text-align:center;color:white;margin:8px 0 18px}
+.badge{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:950}
+.hero h1{font-size:clamp(32px,8vw,58px);margin:12px 0 4px;letter-spacing:-1px;text-shadow:0 8px 24px rgba(0,0,0,.4)}
+.hero p{margin:0;color:#e2e8f0;font-weight:850}
+.card{background:rgba(255,255,255,.94);border-radius:26px;padding:18px;box-shadow:0 22px 70px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.55)}
+.select-box{background:#fff7ed;border:2px solid #fed7aa;border-radius:18px;padding:12px;margin-bottom:14px}
+label.title{display:block;font-size:13px;font-weight:950;margin-bottom:7px}
+select{width:100%;padding:13px 14px;border-radius:13px;border:1px solid #cbd5e1;font-weight:900;font-size:15px;background:white;color:#0f172a}
+.groups{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.group{background:white;border:2px solid #e2e8f0;border-radius:18px;padding:12px;min-height:176px;position:relative;overflow:hidden}
+.group::before{content:"";position:absolute;top:0;left:0;right:0;height:5px}
+.group.g1::before{background:linear-gradient(90deg,#ef4444,#f97316)}
+.group.g2::before{background:linear-gradient(90deg,#2563eb,#06b6d4)}
+.group.g3::before{background:linear-gradient(90deg,#7c3aed,#ec4899)}
+.group.g4::before{background:linear-gradient(90deg,#16a34a,#84cc16)}
+.group.g5{grid-column:1 / -1}
+.group.g5::before{background:linear-gradient(90deg,#facc15,#f97316)}
+.group-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.group h2{font-size:18px;margin:0;font-weight:950}
+.pill{background:#0f172a;color:white;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:950}
+.option{display:flex;align-items:center;gap:10px;padding:11px 10px;margin:8px 0;border-radius:14px;background:#f8fafc;border:1px solid #dbe3ef;cursor:pointer;transition:.15s}
+.option:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(15,23,42,.10)}
+.option.selected{background:#f0fdf4;border-color:#22c55e;box-shadow:0 0 0 1px rgba(34,197,94,.25)}
+.option input{transform:scale(1.25);accent-color:#2563eb}
+.driver{font-size:14px;font-weight:950;line-height:1.1}
+.country{font-size:11px;color:#64748b;font-weight:800;margin-top:2px}
+.actions{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:16px}
+button{border:0;border-radius:15px;padding:14px 12px;font-weight:950;cursor:pointer;font-size:15px}
+.submit{background:linear-gradient(135deg,#facc15,#fb923c,#ef4444);color:#111827}
+.clear{background:#e2e8f0;color:#0f172a}
+.note{margin-top:12px;background:#f8fafc;border-radius:12px;padding:10px;color:#64748b;font-size:11px;font-weight:800}
+.status{margin-top:10px;font-weight:950;text-align:center}
+@media(max-width:620px){
+  body{padding:10px}
+  .groups{grid-template-columns:1fr}
+  .group.g5{grid-column:auto}
+  .actions{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <span class="badge">🏆 GP-TIPPET</span>
+    <h1>🏁 Speedway GP Tips</h1>
+    <p>Välj ditt namn och tippa 1 förare i varje grupp.</p>
+  </div>
+
+  <div class="card">
+    <div class="select-box">
+      <label class="title" for="player">♟️ Välj ditt namn</label>
+      <select id="player"></select>
+    </div>
+
+    <div id="groups" class="groups"></div>
+
+    <div class="actions">
+      <button class="submit" onclick="submitTip()">🏁 Skicka in tips</button>
+      <button class="clear" onclick="clearChoices()">Rensa val</button>
+    </div>
+
+    <div class="note">🔒 Dina vänner ser bara sina egna val på sidan. När du skickar hamnar tipset i Google Sheets.</div>
+    <div id="status" class="status"></div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// ÄNDRA INFÖR VARJE GP HÄR
+// Byt förare/grupper här. Resten av sidan bygger sig själv.
+// =====================================================
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxncjSXkDkGyV-PM0Ui8y5JJAeMOkCaYm6O13_zwLf8eKelB59QMIHLIWLAZS3ZngvGnQ/exec";
+
+const PEOPLE = [
+  "Roger","Ahlander","Ola","Stefan","Robert","Mikael",
+  "Olle","Per-Erik","Christel","Niklas","Magnus","Susanne"
+];
+
+const GROUPS = {
+  1: [
+    ["Brady Kurtz", "Australien"],
+    ["Kacper Woryna", "Polen"]
+  ],
+  2: [
+    ["Jack Holder", "Australien"],
+    ["Robert Lambert", "England"],
+    ["Patryk Dudek", "Polen"]
+  ],
+  3: [
+    ["Leon Madsen", "Danmark"],
+    ["Jason Doyle", "Australien"],
+    ["Andzejs Lebedevs", "Lettland"]
+  ],
+  4: [
+    ["Max Fricke", "Australien"],
+    ["Anders Thomsen", "Danmark"],
+    ["Michael Jepsen Jensen", "Danmark"]
+  ],
+  5: [
+    ["Kai Huckenbeck", "Tyskland"],
+    ["Jan Kvech", "Tjeckien"],
+    ["Nazar Parnitskyi", "Ukraina"]
+  ]
+};
+
+function renderPeople(){
+  const sel = document.getElementById('player');
+  sel.innerHTML = '<option value="">-- Välj namn --</option>' + PEOPLE.map(p=>'<option>'+escapeHtml(p)+'</option>').join('');
+}
+
+function renderGroups(){
+  const box = document.getElementById('groups');
+  box.innerHTML = Object.keys(GROUPS).map(g=>{
+    return '<div class="group g'+g+'"><div class="group-head"><h2>Grupp '+g+'</h2><span class="pill">Välj 1</span></div>' +
+      GROUPS[g].map(d=>{
+        const name = d[0];
+        const country = d[1] || '';
+        return '<label class="option"><input type="radio" name="g'+g+'" value="'+escapeHtml(name)+'" onchange="updateSelected()"><div><div class="driver">'+escapeHtml(name)+'</div><div class="country">'+escapeHtml(country)+'</div></div></label>';
+      }).join('') +
+    '</div>';
+  }).join('');
+}
+
+function updateSelected(){
+  document.querySelectorAll('.option').forEach(o=>o.classList.remove('selected'));
+  document.querySelectorAll('.option input:checked').forEach(i=>i.closest('.option').classList.add('selected'));
+}
+
+function clearChoices(){
+  document.querySelectorAll('input[type="radio"]').forEach(i=>i.checked=false);
+  updateSelected();
+  document.getElementById('status').textContent='';
+}
+
+function submitTip(){
+  const player = document.getElementById('player').value;
+  if(!player){ alert('Välj ditt namn först.'); return; }
+
+  const picks = {};
+  for(let i=1;i<=5;i++){
+    const checked = document.querySelector('input[name="g'+i+'"]:checked');
+    if(!checked){ alert('Du måste välja en förare i Grupp '+i+'.'); return; }
+    picks['g'+i] = checked.value;
+  }
+
+  const msg = 'Är du säker på att du vill skicka in denna raden?\n\n' +
+              player + '\n' + Object.values(picks).join('\n');
+  if(!confirm(msg)) return;
+
+  fetch(SCRIPT_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      name: player,
+      player,
+      g1:picks.g1,
+      g2:picks.g2,
+      g3:picks.g3,
+      g4:picks.g4,
+      g5:picks.g5
+    })
+  });
+
+  document.getElementById('status').textContent = '✅ Tipset är skickat!';
+}
+
+function escapeHtml(v){
+  return String(v ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+renderPeople();
+renderGroups();
+</script>
+</body>
+</html>
