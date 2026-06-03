@@ -21,13 +21,13 @@ body{
 }
 .wrap{max-width:760px;margin:0 auto}
 .hero{text-align:center;color:white;margin:8px 0 18px}
-.badge{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:950}
+.badge{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);padding:6px 12px;border-radius:999px;font-size:15px;font-weight:950}
 .hero h1{font-size:clamp(32px,8vw,58px);margin:12px 0 4px;letter-spacing:-1px;text-shadow:0 8px 24px rgba(0,0,0,.4)}
 .hero p{margin:0;color:#e2e8f0;font-weight:850}
 .card{background:rgba(255,255,255,.94);border-radius:26px;padding:18px;box-shadow:0 22px 70px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.55)}
 .select-box{background:#fff7ed;border:2px solid #fed7aa;border-radius:18px;padding:12px;margin-bottom:14px}
 label.title{display:block;font-size:13px;font-weight:950;margin-bottom:7px}
-select{width:100%;padding:13px 14px;border-radius:13px;border:1px solid #cbd5e1;font-weight:900;font-size:15px;background:white;color:#0f172a}
+select{width:100%;padding:13px 14px;border-radius:13px;border:1px solid #cbd5e1;font-weight:900;font-size:12px;background:white;color:#0f172a}
 .groups{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .group{background:white;border:2px solid #e2e8f0;border-radius:18px;padding:12px;min-height:176px;position:relative;overflow:hidden}
 .group::before{content:"";position:absolute;top:0;left:0;right:0;height:5px}
@@ -38,7 +38,7 @@ select{width:100%;padding:13px 14px;border-radius:13px;border:1px solid #cbd5e1;
 .group.g5{grid-column:1 / -1}
 .group.g5::before{background:linear-gradient(90deg,#facc15,#f97316)}
 .group-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.group h2{font-size:18px;margin:0;font-weight:950}
+.group h2{font-size:15px;margin:0;font-weight:950}
 .pill{background:#0f172a;color:white;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:950}
 .option{display:flex;align-items:center;gap:10px;padding:11px 10px;margin:8px 0;border-radius:14px;background:#f8fafc;border:1px solid #dbe3ef;cursor:pointer;transition:.15s}
 .option:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(15,23,42,.10)}
@@ -58,6 +58,109 @@ button{border:0;border-radius:15px;padding:14px 12px;font-weight:950;cursor:poin
   .group.g5{grid-column:auto}
   .actions{grid-template-columns:1fr}
 }
+
+.confirm-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  padding:20px;
+}
+.confirm-box{
+  background:white;
+  border-radius:24px;
+  padding:28px 24px;
+  max-width:420px;
+  width:100%;
+  text-align:center;
+  box-shadow:0 24px 70px rgba(0,0,0,.35);
+  border:3px solid #22c55e;
+}
+.confirm-box h2{
+  margin:0 0 18px;
+  font-size:30px;
+  line-height:1.15;
+  color:#166534;
+  font-weight:950;
+}
+.confirm-box button{
+  width:auto;
+  min-width:150px;
+  padding:14px 26px;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+  font-size:18px;
+}
+
+
+.send-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:10000;
+  padding:20px;
+}
+.send-box{
+  background:white;
+  border-radius:24px;
+  padding:26px 22px;
+  max-width:460px;
+  width:100%;
+  box-shadow:0 24px 70px rgba(0,0,0,.35);
+}
+.send-box h2{
+  margin:0 0 16px;
+  font-size:15px;
+  color:#0f172a;
+  font-weight:950;
+  text-align:center;
+}
+.send-box .summary{
+  background:#f8fafc;
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:18px;
+  font-size:18px;
+  line-height:1.7;
+  font-weight:850;
+}
+.send-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.send-actions button{
+  padding:14px;
+  font-size:17px;
+  font-weight:950;
+}
+.btn-cancel{
+  background:#e2e8f0;
+  color:#0f172a;
+}
+.btn-ok{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+}
+
+
+/* FIX: Första popupen - all text samma storlek */
+.send-box h2,
+.send-box .summary,
+.send-box .summary *,
+#sendSummary,
+#sendSummary *{
+  font-size:15px !important;
+  line-height:1.45 !important;
+  font-weight:800 !important;
+}
+
 </style>
 </head>
 <body>
@@ -106,10 +209,10 @@ const GROUPS = {
   2: [
     ["Jack Holder", "Australien"],
     ["Robert Lambert", "England"],
-    ["Patryk Dudek", "Polen"]
+    ["Leon Madsen", "Danmark"]
   ],
   3: [
-    ["Leon Madsen", "Danmark"],
+    ["Patryk Dudek", "Polen"],
     ["Jason Doyle", "Australien"],
     ["Andzejs Lebedevs", "Lettland"]
   ],
@@ -165,34 +268,79 @@ function submitTip(){
     picks['g'+i] = checked.value;
   }
 
-  const msg = 'Är du säker på att du vill skicka in denna raden?\n\n' +
-              player + '\n' + Object.values(picks).join('\n');
-  if(!confirm(msg)) return;
-
-  fetch(SCRIPT_URL,{
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      name: player,
-      player,
-      g1:picks.g1,
-      g2:picks.g2,
-      g3:picks.g3,
-      g4:picks.g4,
-      g5:picks.g5
-    })
+  const summary = player + '<br><br>' + Object.values(picks).join('<br>');
+  openSendConfirm(summary, {
+    name: player,
+    player,
+    g1:picks.g1,
+    g2:picks.g2,
+    g3:picks.g3,
+    g4:picks.g4,
+    g5:picks.g5
   });
-
-  document.getElementById('status').textContent = '✅ Tipset är skickat!';
 }
 
 function escapeHtml(v){
   return String(v ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 }
 
+
+let pendingPayload = null;
+
+function openSendConfirm(summary, payload){
+  pendingPayload = payload;
+  document.getElementById('sendSummary').innerHTML = summary;
+  document.getElementById('sendConfirm').style.display='flex';
+}
+
+function closeSendConfirm(){
+  document.getElementById('sendConfirm').style.display='none';
+}
+
+function confirmSubmit(){
+  if(!pendingPayload) return;
+
+  fetch(SCRIPT_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(pendingPayload)
+  });
+
+  closeSendConfirm();
+  showCustomConfirm();
+}
+
+function showCustomConfirm(){
+  document.getElementById('customConfirm').style.display='flex';
+}
+
+function closeCustomConfirm(){
+  document.getElementById('customConfirm').style.display='none';
+}
+
 renderPeople();
 renderGroups();
 </script>
+
+<div id="customConfirm" class="confirm-overlay">
+  <div class="confirm-box">
+    <h2>✅ Tack för att du skickat in tipset!</h2>
+    <button onclick="closeCustomConfirm()">OK</button>
+  </div>
+</div>
+
+
+<div id="sendConfirm" class="send-overlay">
+  <div class="send-box">
+    <h2>Är du säker på att du vill skicka in denna raden?</h2>
+    <div id="sendSummary" class="summary"></div>
+    <div class="send-actions">
+      <button class="btn-cancel" onclick="closeSendConfirm()">Avbryt</button>
+      <button class="btn-ok" onclick="confirmSubmit()">Skicka</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
