@@ -288,7 +288,9 @@ function showTab(id,btn){
   document.getElementById(id).classList.add('active'); btn.classList.add('active'); renderAll();
 }
 function renderScores(){
-  document.getElementById('scoreTable').innerHTML='<tr><th class="nr">#</th><th class="name">Förare</th>'+Array.from({length:20},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Sem1</th><th>Sem2</th><th>Final</th><th>Summa</th></tr>'+
+  const scoreTable=document.getElementById('scoreTable');
+  if(!scoreTable) return;
+  scoreTable.innerHTML='<tr><th class="nr">#</th><th class="name">Förare</th>'+Array.from({length:20},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Sem1</th><th>Sem2</th><th>Final</th><th>Summa</th></tr>'+
   rows.map((r,i)=>'<tr><td class="nr">'+r.nr+'</td><td class="name">'+r.name+'</td>'+heatKeys.map((k,c)=>{
     const locked=isLockedCell(i,c);
     return '<td><input class="score '+(locked?'locked':'')+'" '+(locked?'disabled tabindex="-1"':'')+' style="background:'+(r[k+'_color']||colorFor(i,c))+';color:'+(r[k+'_color'] ? ((r[k+'_color']==='#ff2a1f'||r[k+'_color']==='#2463ff')?'white':'black') : scoreTextColor(i,c))+'" data-r="'+i+'" data-c="'+c+'" value="'+(r[k]||'')+'" oninput="validateScoreInput(this,'+i+','+c+',\''+k+'\')" onfocus="highlightScoreRow(this)" onblur="clearScoreRow(this)" onkeydown="nav(event)"></td>';
