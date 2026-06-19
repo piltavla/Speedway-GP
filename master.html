@@ -226,7 +226,7 @@ function normalizeName(v){
   let s=String(v||'').trim().toLowerCase().replace(/\s+/g,' ');
   const aliases={'andres lebedevs':'Andzejs Lebedevs','andzejs lebedevs':'Andzejs Lebedevs','andrzejs lebedevs':'Andzejs Lebedevs','kasper woryna':'Kacper Woryna','kascper woryna':'Kacper Woryna','kacper woryna':'Kacper Woryna','nazar parnitskiy':'Nazar Parnitskyi','nazar parnitsky':'Nazar Parnitskyi','michael jepsen':'Michael Jepsen Jensen','michael jepsen jensen':'Michael Jepsen Jensen','bartoz zmarzlik':'Bartosz Zmarzlik','bartos zmarzlik':'Bartosz Zmarzlik','wildcard':'Wild Card','wild card':'Wild Card'};
   if(aliases[s]) return aliases[s];
-  const d=drivers.find(x=>x[1].toLowerCase()===s);
+  const d=drivers.find(x=>String(x[1]||'').toLowerCase()===s);
   return d?d[1]:String(v||'').trim();
 }
 function getDriverPoints(name){const n=normalizeName(name);const r=rows.find(x=>x.name===n);return r?total(r):0}
