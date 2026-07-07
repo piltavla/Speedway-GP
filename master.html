@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -168,24 +169,24 @@ tr.active-score-row input.score{
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxncjSXkDkGyV-PM0Ui8y5JJAeMOkCaYm6O13_zwLf8eKelB59QMIHLIWLAZS3ZngvGnQ/exec";
 
 const drivers = [
-['52','Michael Jepsen Jensen'],
-['201','Jan Kvech'],
-['785','Nazar Parnitskyi'],
-['29','Andzejs Lebedevs'],
-['505','Robert Lambert'],
-['101','Brady Kurtz'],
-['25','Jack Holder'],
-['692','Patryk Dudek'],
-['95','Bartosz Zmarzlik'],
-['415','Dominik Kubera'],
-['223','Kacper Woryna'],
-['30','Leon Madsen'],
-['16','Wild Card'],
-['46','Max Fricke'],
-['69','Jason Doyle'],
-['105','Anders Thomsen']
+  ['201','Jan Kvech'],
+  ['95','Bartosz Zmarzlik'],
+  ['30','Leon Madsen'],
+  ['52','Michael Jepsen Jensen'],
+  ['692','Patryk Dudek'],
+  ['785','Nazar Parnitskyi'],
+  ['46','Max Fricke'],
+  ['223','Kacper Woryna'],
+  ['69','Jason Doyle'],
+  ['16','Tom Brennan'],
+  ['101','Brady Kurtz'],
+  ['29','Andzejs Lebedevs'],
+  ['25','Jack Holder'],
+  ['744','Kai Huckenbeck'],
+  ['505','Robert Lambert'],
+  ['105','Anders Thomsen']
 ];
-const heatKeys = ['h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11','h12','h13','h14','h15','h16','h17','h18','h19','h20','s1','s2','f'];
+const heatKeys = ['h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11','h12','h13','h14','h15','h16','h17','h18','h19','h20','s1','s2','f','extra'];
 
 let rows = drivers.map(d => {
   const o = {nr:d[0], name:d[1]};
@@ -193,6 +194,10 @@ let rows = drivers.map(d => {
   return o;
 });
 let tips = [];
+let autosaveTimer = null;
+let autosaveBusy = false;
+let autosavePending = false;
+let hasLoadedFromSheets = false;
 
 function colorFor(row,col){
   if(col>19) return '#33383a';
@@ -226,7 +231,7 @@ function normalizeName(v){
   let s=String(v||'').trim().toLowerCase().replace(/\s+/g,' ');
   const aliases={'andres lebedevs':'Andzejs Lebedevs','andzejs lebedevs':'Andzejs Lebedevs','andrzejs lebedevs':'Andzejs Lebedevs','kasper woryna':'Kacper Woryna','kascper woryna':'Kacper Woryna','kacper woryna':'Kacper Woryna','nazar parnitskiy':'Nazar Parnitskyi','nazar parnitsky':'Nazar Parnitskyi','michael jepsen':'Michael Jepsen Jensen','michael jepsen jensen':'Michael Jepsen Jensen','bartoz zmarzlik':'Bartosz Zmarzlik','bartos zmarzlik':'Bartosz Zmarzlik','wildcard':'Wild Card','wild card':'Wild Card'};
   if(aliases[s]) return aliases[s];
-  const d=drivers.find(x=>String(x[1]||'').toLowerCase()===s);
+  const d=drivers.find(x=>x[1].toLowerCase()===s);
   return d?d[1]:String(v||'').trim();
 }
 function getDriverPoints(name){const n=normalizeName(name);const r=rows.find(x=>x.name===n);return r?total(r):0}
@@ -257,15 +262,61 @@ function receiveAll(data){
       const rowIndex=drivers.findIndex(x=>x[1]===d[1]);
       if(isLockedCell(rowIndex,c)) o['h'+(c+1)]='';
     }
-    o.s1=found.s1||''; o.s2=found.s2||''; o.f=found.f||'';
+    o.s1=found.s1||''; o.s2=found.s2||''; o.f=found.f||''; o.extra=found.extra||'';
     return o;
   });
+  hasLoadedFromSheets = true;
   document.getElementById('status').textContent='Hämtat '+tips.length+' tips från Sheets.';
   renderAll();
 }
+function buildScoresPayload(){
+  return rows.map(r=>({name:r.name,...Object.fromEntries(heatKeys.map(k=>[k,r[k]||'']))}));
+}
+
+function setSaveStatus(text){
+  const status=document.getElementById('status');
+  if(status) status.textContent=text;
+}
+
+function saveScoresSilent(){
+  if(!hasLoadedFromSheets) return;
+
+  const scores=buildScoresPayload();
+
+  if(autosaveBusy){
+    autosavePending = true;
+    return;
+  }
+
+  autosaveBusy = true;
+  setSaveStatus('Autosparar till Sheets...');
+
+  fetch(SCRIPT_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'saveScores',scores})
+  }).then(()=>{
+    setSaveStatus('Autosparat till Sheets ' + new Date().toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit', second:'2-digit'}));
+  }).catch(()=>{
+    setSaveStatus('Kunde inte autospara till Sheets.');
+  }).finally(()=>{
+    autosaveBusy = false;
+    if(autosavePending){
+      autosavePending = false;
+      scheduleAutosave();
+    }
+  });
+}
+
+function scheduleAutosave(){
+  if(!hasLoadedFromSheets) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(saveScoresSilent, 5000);
+}
+
 function saveScoresToCloud(){
-  const scores=rows.map(r=>({name:r.name,...Object.fromEntries(heatKeys.map(k=>[k,r[k]||'']))}));
-  fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'saveScores',scores})});
+  saveScoresSilent();
   alert('Poängen skickades till Google Sheets. Tryck Hämta från Sheets på annan enhet.');
 }
 
@@ -275,7 +326,7 @@ function showTab(id,btn){
   document.getElementById(id).classList.add('active'); btn.classList.add('active'); renderAll();
 }
 function renderScores(){
-  document.getElementById('scoreTable').innerHTML='<tr><th class="nr">#</th><th class="name">Förare</th>'+Array.from({length:20},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Sem1</th><th>Sem2</th><th>Final</th><th>Summa</th></tr>'+
+  document.getElementById('scoreTable').innerHTML='<tr><th class="nr">#</th><th class="name">Förare</th>'+Array.from({length:20},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Sem1</th><th>Sem2</th><th>Final</th><th>Extra</th><th>Summa</th></tr>'+
   rows.map((r,i)=>'<tr><td class="nr">'+r.nr+'</td><td class="name">'+r.name+'</td>'+heatKeys.map((k,c)=>{
     const locked=isLockedCell(i,c);
     return '<td><input class="score '+(locked?'locked':'')+'" '+(locked?'disabled tabindex="-1"':'')+' style="background:'+(r[k+'_color']||colorFor(i,c))+';color:'+(r[k+'_color'] ? ((r[k+'_color']==='#ff2a1f'||r[k+'_color']==='#2463ff')?'white':'black') : scoreTextColor(i,c))+'" data-r="'+i+'" data-c="'+c+'" value="'+(r[k]||'')+'" oninput="validateScoreInput(this,'+i+','+c+',\''+k+'\')" onfocus="highlightScoreRow(this)" onblur="clearScoreRow(this)" onkeydown="nav(event)"></td>';
@@ -369,6 +420,22 @@ function validateScoreInput(input,row,col,key){
 
   const value=String(input.value||'').trim();
 
+  // Extra-kolumn: valfri siffra, även minuspoäng
+  if(key === 'extra'){
+    if(value !== '' && !/^-?\d+$/.test(value)){
+      input.value='';
+      rows[row][key]='';
+      flashInvalid(input);
+      alert('Extra-kolumnen tillåter bara heltal, t.ex. 2 eller -2.');
+      updateRowSum(row);
+      return;
+    }
+    rows[row][key]=value;
+    updateRowSum(row);
+    scheduleAutosave();
+    return;
+  }
+
   if(col >= 20 && applySemiFinalColor(input,row,col,key,value)) return;
 
   if(value!=='' && !['0','1','2','3'].includes(value)){
@@ -383,6 +450,7 @@ function validateScoreInput(input,row,col,key){
   if(value===''){
     rows[row][key]='';
     updateRowSum(row);
+    scheduleAutosave();
     return;
   }
 
@@ -435,6 +503,7 @@ function validateScoreInput(input,row,col,key){
   rows[row][key+'_color']='';
   rows[row][key]=value;
   updateRowSum(row);
+  scheduleAutosave();
 }
 
 function updateRowSum(row){
@@ -598,6 +667,7 @@ function driverPointsForStage(name, stage){
   total += Number(r.s1)||0;
   total += Number(r.s2)||0;
   total += Number(r.f)||0;
+  total += Number(r.extra)||0;
   return total;
 }
 
@@ -769,8 +839,18 @@ function escapeHtml(v){
 
 function renderAll(){renderScores();renderLeaderboard();renderTips();renderTipsPoints();renderDuplicates()}
 document.getElementById('stageSelect')?.addEventListener('change',renderLeaderboard);
+
+
 renderAll();
 loadAll();
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden') saveScoresSilent();
+});
+
+window.addEventListener('beforeunload', ()=>{
+  saveScoresSilent();
+});
 </script>
 </body>
 </html>
