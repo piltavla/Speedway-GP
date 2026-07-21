@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -113,12 +114,32 @@ tr.active-score-row input.score{
   .tip-points-grid{grid-template-columns:1fr;}
 }
 
+
+.driver-admin-bar{display:flex;justify-content:flex-end;margin-bottom:10px}
+.driver-admin-btn{background:linear-gradient(135deg,#7c3aed,#312e81);color:white;padding:11px 16px}
+.driver-modal{display:none;position:fixed;inset:0;background:rgba(2,6,23,.78);z-index:1000;padding:14px;overflow:auto}
+.driver-modal.open{display:flex;align-items:flex-start;justify-content:center}
+.driver-panel{width:min(760px,100%);background:white;border-radius:24px;padding:18px;margin:20px auto;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+.driver-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.driver-panel-head h2{margin:0;font-size:24px}
+.driver-close{background:#e2e8f0;color:#111827;min-width:46px}
+.driver-list{display:grid;gap:6px;max-height:55vh;overflow:auto;padding-right:3px}
+.driver-row{display:grid;grid-template-columns:38px 90px 1fr 42px 42px;gap:6px;align-items:center}
+.driver-row input{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:10px;font-weight:850;font-size:14px}
+.driver-order{font-weight:950;text-align:center}
+.driver-move{padding:7px 4px;min-height:38px;border-radius:10px;background:#e2e8f0;color:#111827}
+.driver-import{width:100%;min-height:100px;padding:10px;border:1px solid #cbd5e1;border-radius:12px;font-family:monospace;margin-top:10px}
+.driver-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.driver-help{font-size:12px;color:#475569;font-weight:750;line-height:1.4;margin-top:8px}
+@media(max-width:560px){.driver-row{grid-template-columns:30px 70px 1fr 38px 38px}.driver-panel{padding:12px}.driver-row input{font-size:12px;padding:8px 5px}}
+
 </style>
 </head>
 <body>
 <div class="wrapper">
   <div class="hero"><h1>🏁 Speedway GP</h1></div>
   <div class="card">
+    <div class="driver-admin-bar"><button class="driver-admin-btn" onclick="openDriverAdmin()">⚙️ Hantera förare</button></div>
     <div class="tabs">
       <button class="tab active" onclick="showTab('leaderboard',this)">Topplista</button>
       <button class="tab" onclick="showTab('scores',this)">Poäng</button>
@@ -165,10 +186,28 @@ tr.active-score-row input.score{
   </div>
 </div>
 
+
+<div id="driverModal" class="driver-modal" onclick="closeDriverAdminFromBackdrop(event)">
+  <div class="driver-panel">
+    <div class="driver-panel-head">
+      <h2>⚙️ Hantera förare</h2>
+      <button class="driver-close" onclick="closeDriverAdmin()">✕</button>
+    </div>
+    <div class="info">Ändra nummer, namn eller ordning. När du sparar uppdateras både förarlistan och Resultat. Inkomna Tips rörs inte.</div>
+    <div id="driverEditorRows" class="driver-list"></div>
+    <textarea id="driverImportText" class="driver-import" placeholder="Klistra in 16 rader här, till exempel:\n16    Kim Nilsson\n201   Jan Kvech"></textarea>
+    <div class="driver-modal-actions">
+      <button class="dark" onclick="importDriverList()">📋 Importera listan</button>
+      <button class="green" onclick="saveDriverAdmin()">💾 Spara och uppdatera</button>
+    </div>
+    <div class="driver-help">Importen accepterar tabbar, semikolon eller flera mellanslag mellan nummer och namn. Exakt 16 förare krävs.</div>
+  </div>
+</div>
+
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxncjSXkDkGyV-PM0Ui8y5JJAeMOkCaYm6O13_zwLf8eKelB59QMIHLIWLAZS3ZngvGnQ/exec";
 
-const drivers = [
+const DEFAULT_DRIVERS = [
 ['16','Kim Nilsson'],
 ['201','Jan Kvech'],
 ['52','Michael Jepsen Jensen'],
@@ -186,6 +225,7 @@ const drivers = [
 ['105','Anders Thomsen'],
 ['69','Jason Doyle']
 ];
+let drivers = DEFAULT_DRIVERS.map(d => [...d]);
 const heatKeys = ['h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11','h12','h13','h14','h15','h16','h17','h18','h19','h20','s1','s2','f','extra'];
 
 let rows = drivers.map(d => {
@@ -250,6 +290,9 @@ function jsonp(action, cb){
 }
 function loadAll(){jsonp('all','receiveAll')}
 function receiveAll(data){
+  if(Array.isArray(data.drivers) && data.drivers.length===16){
+    drivers=data.drivers.map(d=>[String(d[0]||'').trim(),String(d[1]||'').trim()]);
+  }
   tips=(data.tips||[]).map(t=>({name:t.name,g1:normalizeName(t.g1),g2:normalizeName(t.g2),g3:normalizeName(t.g3),g4:normalizeName(t.g4),g5:normalizeName(t.g5)}));
   const incoming=data.scores||[];
   rows=drivers.map(d=>{
@@ -835,6 +878,76 @@ function receiveHistory(data){
 
 function escapeHtml(v){
   return String(v ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+
+let driverDraft=[];
+
+function openDriverAdmin(){
+  driverDraft=drivers.map(d=>[d[0],d[1]]);
+  renderDriverEditor();
+  document.getElementById('driverImportText').value='';
+  document.getElementById('driverModal').classList.add('open');
+}
+
+function closeDriverAdmin(){document.getElementById('driverModal').classList.remove('open')}
+function closeDriverAdminFromBackdrop(e){if(e.target.id==='driverModal')closeDriverAdmin()}
+
+function renderDriverEditor(){
+  const box=document.getElementById('driverEditorRows');
+  box.innerHTML=driverDraft.map((d,i)=>
+    '<div class="driver-row">'+
+      '<div class="driver-order">'+(i+1)+'</div>'+
+      '<input aria-label="Nummer" value="'+escapeHtml(d[0])+'" oninput="driverDraft['+i+'][0]=this.value">'+
+      '<input aria-label="Förare" value="'+escapeHtml(d[1])+'" oninput="driverDraft['+i+'][1]=this.value">'+
+      '<button class="driver-move" onclick="moveDriver('+i+',-1)" '+(i===0?'disabled':'')+'>↑</button>'+
+      '<button class="driver-move" onclick="moveDriver('+i+',1)" '+(i===driverDraft.length-1?'disabled':'')+'>↓</button>'+
+    '</div>'
+  ).join('');
+}
+
+function moveDriver(index,dir){
+  const next=index+dir;
+  if(next<0||next>=driverDraft.length)return;
+  [driverDraft[index],driverDraft[next]]=[driverDraft[next],driverDraft[index]];
+  renderDriverEditor();
+}
+
+function importDriverList(){
+  const text=document.getElementById('driverImportText').value.trim();
+  if(!text){alert('Klistra först in förarlistan.');return;}
+  const parsed=text.split(/\r?\n/).map(line=>{
+    const clean=line.trim();
+    let parts=clean.split(/\t|;|\s{2,}/).filter(Boolean);
+    if(parts.length<2){
+      const m=clean.match(/^(\S+)\s+(.+)$/);
+      parts=m?[m[1],m[2]]:[];
+    }
+    return [String(parts[0]||'').trim(),String(parts.slice(1).join(' ')||'').trim()];
+  }).filter(d=>d[0]||d[1]);
+  if(parsed.length!==16){alert('Listan innehåller '+parsed.length+' rader. Det måste vara exakt 16.');return;}
+  if(parsed.some(d=>!d[0]||!d[1])){alert('Någon rad saknar nummer eller namn.');return;}
+  driverDraft=parsed;
+  renderDriverEditor();
+}
+
+function saveDriverAdmin(){
+  const cleaned=driverDraft.map(d=>[String(d[0]||'').trim(),String(d[1]||'').trim()]);
+  if(cleaned.length!==16||cleaned.some(d=>!d[0]||!d[1])){alert('Alla 16 rader måste ha både nummer och förarnamn.');return;}
+  const names=cleaned.map(d=>d[1].toLowerCase());
+  if(new Set(names).size!==names.length){alert('Samma förare finns flera gånger.');return;}
+  if(!confirm('Spara den nya förarlistan och uppdatera Resultat?\n\nInkomna Tips påverkas inte.'))return;
+
+  setSaveStatus('Sparar förarlistan...');
+  fetch(SCRIPT_URL,{
+    method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'saveDrivers',drivers:cleaned})
+  }).then(()=>{
+    drivers=cleaned.map(d=>[...d]);
+    closeDriverAdmin();
+    setSaveStatus('Förarlistan skickad. Hämtar uppdateringen...');
+    setTimeout(loadAll,1800);
+  }).catch(()=>alert('Kunde inte spara förarlistan.'));
 }
 
 function renderAll(){renderScores();renderLeaderboard();renderTips();renderTipsPoints();renderDuplicates()}
