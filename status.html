@@ -138,7 +138,6 @@ tr.active-score-row input.score{
           <option>Slutställning</option>
         </select>
       </div>
-      <div id="leaderLock" class="info">Topplistan öppnas efter deadline.</div>
       <div class="leader-list" id="leaderCards"></div>
       <div id="status" class="info" style="margin-top:35px;">Klicka Hämta från Sheets.</div>
     </section>
@@ -146,7 +145,7 @@ tr.active-score-row input.score{
 
     <section id="tips" class="section"><div id="tipsLock" class="info">Tipsen öppnas efter deadline.</div><div id="tipsCards"></div></section>
     <section id="tipPoints" class="section"><div id="tipPointsLock" class="info">Tips Poäng öppnas efter deadline.</div><div id="tipPointsCards"></div></section>
-    <section id="duplicates" class="section"><div id="dupLock" class="info">Dubletter öppnas efter deadline.</div><div id="duplicateBox" class="dup-list"></div></section>
+    <section id="duplicates" class="section"><div class="info">Dublett visas bara om två personer har exakt samma 5 förare.</div><div id="duplicateBox" class="dup-list"></div></section>
     <section id="history" class="section">
       <div class="info">Här visas sparade tävlingar från fliken Historik i Google Sheets.</div>
       <div class="actions">
@@ -159,26 +158,29 @@ tr.active-score-row input.score{
 </div>
 
 <script>
+// Status V3: dynamiska förare från fliken Förare + stöd för Extra
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxncjSXkDkGyV-PM0Ui8y5JJAeMOkCaYm6O13_zwLf8eKelB59QMIHLIWLAZS3ZngvGnQ/exec";
 
-const drivers = [
-['16','Kim Nilsson'],
-['201','Jan Kvech'],
-['52','Michael Jepsen Jensen'],
-['785','Nazar Parnitskyi'],
-['95','Bartosz Zmarzlik'],
-['30','Leon Madsen'],
-['415','Dominik Kubera'],
-['505','Robert Lambert'],
-['744','Kai Huckenbeck'],
-['29','Andzejs Lebedevs'],
-['101','Brady Kurtz'],
-['223','Kacper Woryna'],
-['692','Patryk Dudek'],
-['46','Max Fricke'],
-['105','Anders Thomsen'],
-['69','Jason Doyle']
+const DEFAULT_DRIVERS = [
+  ['16','Kim Nilsson'],
+  ['201','Jan Kvech'],
+  ['52','Michael Jepsen Jensen'],
+  ['785','Nazar Parnitskyi'],
+  ['95','Bartosz Zmarzlik'],
+  ['30','Leon Madsen'],
+  ['415','Dominik Kubera'],
+  ['505','Robert Lambert'],
+  ['744','Kai Huckenbeck'],
+  ['29','Andzejs Lebedevs'],
+  ['101','Brady Kurtz'],
+  ['223','Kacper Woryna'],
+  ['692','Patryk Dudek'],
+  ['46','Max Fricke'],
+  ['105','Anders Thomsen'],
+  ['69','Jason Doyle']
 ];
+
+let drivers = DEFAULT_DRIVERS.map(d => [...d]);
 const heatKeys = ['h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11','h12','h13','h14','h15','h16','h17','h18','h19','h20','s1','s2','f','extra'];
 
 let rows = drivers.map(d => {
@@ -247,6 +249,13 @@ function receiveSettings(data){
   renderAll();
 }
 function receiveAll(data){
+  if(Array.isArray(data.drivers) && data.drivers.length===16){
+    drivers=data.drivers.map(d=>[
+      String(d[0]||'').trim(),
+      String(d[1]||'').trim()
+    ]);
+  }
+
   tips=(data.tips||[]).map(t=>({name:t.name,g1:normalizeName(t.g1),g2:normalizeName(t.g2),g3:normalizeName(t.g3),g4:normalizeName(t.g4),g5:normalizeName(t.g5)}));
   const incoming=data.scores||[];
   rows=drivers.map(d=>{
@@ -290,9 +299,7 @@ function showTab(id,btn){
   document.getElementById(id).classList.add('active'); btn.classList.add('active'); renderAll();
 }
 function renderScores(){
-  const scoreTable=document.getElementById('scoreTable');
-  if(!scoreTable) return;
-  scoreTable.innerHTML='<tr><th class="nr">#</th><th class="name">Förare</th>'+Array.from({length:20},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Sem1</th><th>Sem2</th><th>Final</th><th>Summa</th></tr>'+
+  document.getElementById('scoreTable').innerHTML='<tr><th class="nr">#</th><th class="name">Förare</th>'+Array.from({length:20},(_,i)=>'<th>'+(i+1)+'</th>').join('')+'<th>Sem1</th><th>Sem2</th><th>Final</th><th>Summa</th></tr>'+
   rows.map((r,i)=>'<tr><td class="nr">'+r.nr+'</td><td class="name">'+r.name+'</td>'+heatKeys.map((k,c)=>{
     const locked=isLockedCell(i,c);
     return '<td><input class="score '+(locked?'locked':'')+'" '+(locked?'disabled tabindex="-1"':'')+' style="background:'+(r[k+'_color']||colorFor(i,c))+';color:'+(r[k+'_color'] ? ((r[k+'_color']==='#ff2a1f'||r[k+'_color']==='#2463ff')?'white':'black') : scoreTextColor(i,c))+'" data-r="'+i+'" data-c="'+c+'" value="'+(r[k]||'')+'" oninput="validateScoreInput(this,'+i+','+c+',\''+k+'\')" onfocus="highlightScoreRow(this)" onblur="clearScoreRow(this)" onkeydown="nav(event)"></td>';
@@ -638,30 +645,18 @@ function updatePublicLock(){
   const msg = 'Tipsen visas efter deadline: ' + swedishDate + '.';
   const tipsLock = document.getElementById('tipsLock');
   const tipPointsLock = document.getElementById('tipPointsLock');
-  const leaderLock = document.getElementById('leaderLock');
-  const dupLock = document.getElementById('dupLock');
-
   if(tipsLock) tipsLock.textContent = publicUnlocked ? 'Tipsen är nu öppna att visa.' : '🔒 ' + msg;
   if(tipPointsLock) tipPointsLock.textContent = publicUnlocked ? 'Tips Poäng är nu öppet att visa.' : '🔒 ' + msg;
-  if(leaderLock) leaderLock.textContent = publicUnlocked ? 'Topplistan är nu öppen att visa.' : '🔒 Topplistan visas efter deadline: ' + swedishDate + '.';
-  if(dupLock) dupLock.textContent = publicUnlocked ? 'Dubletter är nu öppna att visa.' : '🔒 Dubletter visas efter deadline: ' + swedishDate + '.';
 }
 
 function renderLeaderboard(){
-  const box=document.getElementById('leaderCards');
-  if(!box) return;
-  if(!publicUnlocked){
-    box.innerHTML='';
-    return;
-  }
-
   const stage=document.getElementById('stageSelect')?.value || 'Slutställning';
 
   const sorted=[...tips]
     .map(t=>({...t,total:tipTotalForStage(t,stage)}))
     .sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name));
 
-  box.innerHTML=sorted.map((t,i)=>{
+  document.getElementById('leaderCards').innerHTML=sorted.map((t,i)=>{
     const place=i+1;
     const picks=[t.g1,t.g2,t.g3,t.g4,t.g5].map(lastName).join(' ');
     return '<div class="leader-row"><div class="rank">'+place+'</div><div class="leader-total">'+t.total+'</div><div class="leader-line"><span class="leader-name">'+t.name+'</span><span class="leader-picks">'+picks+'</span></div></div>';
@@ -692,11 +687,7 @@ function renderTipsPoints(){
     '</div>';
   }).join('')+'</div>';
 }
-function renderDuplicates(){
-  const box=document.getElementById('duplicateBox');
-  if(!box) return;
-  if(!publicUnlocked){ box.innerHTML=''; return; }
-  const by={};tips.forEach(t=>{const k=rowKey(t);if(!by[k])by[k]=[];by[k].push(t.name)});const d=Object.values(by).filter(a=>a.length>1);box.innerHTML=d.length?d.map(a=>'<div class="dup-card"><div>⚠️</div><div>'+a.join(' och ')+' har samma rad</div></div>').join(''):'<div class="dup-card ok"><div>✅</div><div>Inga identiska rader just nu.</div></div>'}
+function renderDuplicates(){const by={};tips.forEach(t=>{const k=rowKey(t);if(!by[k])by[k]=[];by[k].push(t.name)});const d=Object.values(by).filter(a=>a.length>1);document.getElementById('duplicateBox').innerHTML=d.length?d.map(a=>'<div class="dup-card"><div>⚠️</div><div>'+a.join(' och ')+' har samma rad</div></div>').join(''):'<div class="dup-card ok"><div>✅</div><div>Inga identiska rader just nu.</div></div>'}
 
 
 function archiveScorePageToSheet(){
