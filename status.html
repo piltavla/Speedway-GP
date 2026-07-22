@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -139,7 +140,7 @@ tr.active-score-row input.score{
         </select>
       </div>
       <div class="leader-list" id="leaderCards"></div>
-      <div id="status" class="info" style="margin-top:35px;">Klicka Hämta från Sheets.</div>
+      <div id="status" class="info" style="margin-top:35px;">Hämtar automatiskt från Sheets...</div>
     </section>
 
 
@@ -816,7 +817,7 @@ function escapeHtml(v){
   return String(v ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 }
 
-function renderAll(){renderScores();renderLeaderboard();renderTips();renderTipsPoints();renderDuplicates()}
+function renderAll(){renderLeaderboard();renderTips();renderTipsPoints();renderDuplicates()}
 document.getElementById('stageSelect')?.addEventListener('change',renderLeaderboard);
 
 const AUTO_REFRESH_MS = 10000;
